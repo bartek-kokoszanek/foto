@@ -26,7 +26,7 @@
   const lbNext     = document.getElementById("lb-next");
   const lbBackdrop = lightbox.querySelector(".lb-backdrop");
 
-  let photos = [];       // [{name, url, size}]
+  let photos = [];
   let selected = new Set();
   let currentIndex = -1;
 
@@ -65,7 +65,6 @@
     list.forEach((photo, i) => {
       const card = document.createElement("div");
       card.className = "card";
-      card.setAttribute("role", "button");
       card.setAttribute("tabindex", "0");
       card.setAttribute("aria-label", shortName(photo.name));
 
@@ -80,21 +79,32 @@
         '<p class="card-meta">' + ext(photo.name) +
         (photo.size ? " &middot; " + formatSize(photo.size) : "") + "</p>";
 
+      // Checkbox — click toggles selection, does NOT open lightbox
       const check = document.createElement("div");
       check.className = "card-check";
+      check.setAttribute("role", "checkbox");
+      check.setAttribute("aria-label", "Zaznacz");
+      check.setAttribute("tabindex", "0");
       check.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1a1200" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
 
-      card.appendChild(img); card.appendChild(info); card.appendChild(check);
-
-      let clickTimer = null;
-      card.addEventListener("click", () => {
-        if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; openLightbox(i); return; }
-        clickTimer = setTimeout(() => { clickTimer = null; toggleSelect(i); }, 220);
+      check.addEventListener("click", e => {
+        e.stopPropagation();   // prevent card click from firing
+        toggleSelect(i);
       });
+      check.addEventListener("keydown", e => {
+        if (e.key === " " || e.key === "Enter") { e.preventDefault(); e.stopPropagation(); toggleSelect(i); }
+      });
+
+      card.appendChild(img);
+      card.appendChild(info);
+      card.appendChild(check);
+
+      // Card click = open lightbox
+      card.addEventListener("click", () => openLightbox(i));
       card.addEventListener("keydown", e => {
         if (e.key === "Enter") openLightbox(i);
-        if (e.key === " ") { e.preventDefault(); toggleSelect(i); }
       });
+
       galleryEl.appendChild(card);
     });
   }
