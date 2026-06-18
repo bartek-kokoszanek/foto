@@ -3,585 +3,84 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>InvExpo — Inwentaryzacja Salki</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8fafc; color: #0f172a; font-size: 14px; }
-
-  /* HEADER */
-  .header { background: #fff; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100; }
-  .header-inner { max-width: 1100px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; gap: 12px; height: 54px; }
-  .logo { font-weight: 800; font-size: 18px; color: #2563eb; letter-spacing: -0.5px; }
-  .sep { color: #e2e8f0; font-size: 20px; }
-  .nav-btn { background: none; border: none; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; color: #64748b; font-weight: 500; }
-  .nav-btn.active { background: #eff6ff; color: #2563eb; font-weight: 600; }
-  .spacer { flex: 1; }
-  .alarm-btn { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; font-weight: 600; display: none; }
-  .btn-primary { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-weight: 600; font-size: 13px; cursor: pointer; }
-  .btn-ghost { background: #fff; border: 1px solid #e2e8f0; color: #64748b; border-radius: 8px; padding: 8px 18px; font-weight: 500; font-size: 13px; cursor: pointer; }
-  .btn-ghost:hover { background: #f8fafc; }
-  .btn-primary:hover { background: #1d4ed8; }
-  .btn-sm { padding: 4px 12px; font-size: 12px; }
-
-  /* ALARM PANEL */
-  .alarm-panel { background: #fef2f2; border-bottom: 1px solid #fecaca; padding: 12px 20px; display: none; }
-  .alarm-panel-inner { max-width: 1100px; margin: 0 auto; }
-  .alarm-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
-  .alarm-card { background: #fff; border: 1px solid #fecaca; border-radius: 8px; padding: 8px 14px; font-size: 13px; display: flex; align-items: center; gap: 10px; }
-
-  /* TOAST */
-  .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; z-index: 999; box-shadow: 0 4px 20px rgba(0,0,0,0.12); display: none; }
-  .toast.ok { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
-  .toast.err { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-
-  /* MAIN */
-  .main { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
-
-  /* STATS */
-  .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 24px; }
-  .stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; }
-  .stat-card.red { border-color: #fecaca; }
-  .stat-icon { font-size: 22px; }
-  .stat-val { font-size: 26px; font-weight: 800; color: #2563eb; margin-top: 4px; }
-  .stat-val.red { color: #dc2626; }
-  .stat-label { font-size: 12px; color: #64748b; margin-top: 2px; }
-
-  /* FILTERS */
-  .filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
-  .filters input, .filters select { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; color: #0f172a; background: #fff; outline: none; }
-  .filters input { width: 280px; flex: 1 1 200px; }
-  .count-label { color: #64748b; font-size: 13px; white-space: nowrap; }
-
-  /* TABLE */
-  .table-wrap { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 700px; }
-  thead tr { background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
-  th { padding: 10px 14px; text-align: left; font-weight: 600; font-size: 12px; color: #64748b; white-space: nowrap; }
-  tbody tr { border-bottom: 1px solid #e2e8f0; }
-  tbody tr:last-child { border-bottom: none; }
-  tbody tr:nth-child(even) { background: #fafafa; }
-  tbody tr.overdue { background: #fff5f5 !important; }
-  td { padding: 10px 14px; vertical-align: middle; }
-  td.code { font-family: monospace; font-weight: 700; color: #2563eb; font-size: 13px; }
-  td.muted { color: #64748b; }
-  .empty-row td { padding: 40px; text-align: center; color: #94a3b8; }
-
-  /* BADGES */
-  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-  .badge-green { background: #d1fae5; color: #065f46; }
-  .badge-red { background: #fee2e2; color: #991b1b; }
-  .badge-yellow { background: #fef9c3; color: #92400e; }
-  .badge-blue { background: #dbeafe; color: #1e40af; }
-  .badge-gray { background: #f1f5f9; color: #475569; }
-
-  /* TABS */
-  .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
-  .tab { padding: 6px 16px; border-radius: 20px; border: 1px solid #e2e8f0; background: #fff; color: #64748b; font-size: 13px; cursor: pointer; }
-  .tab.active { border-color: #2563eb; background: #eff6ff; color: #2563eb; font-weight: 600; }
-
-  /* FORM */
-  .form-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 32px; max-width: 520px; margin: 0 auto; }
-  .form-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 24px; }
-  .form-group { margin-bottom: 16px; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  label { display: block; font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 6px; }
-  input, select, textarea { width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; color: #0f172a; background: #fff; outline: none; font-family: inherit; }
-  textarea { resize: vertical; }
-  .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
-
-  /* RETURN ROW */
-  .return-row { display: flex; gap: 8px; }
-  .return-row input { max-width: 220px; }
-
-  /* LOGIN */
-  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f8fafc; }
-  .login-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 40px; width: 360px; }
-  .login-card h1 { font-size: 22px; font-weight: 800; color: #2563eb; margin-bottom: 6px; }
-  .login-card p { color: #64748b; font-size: 14px; margin-bottom: 28px; }
-  .login-err { color: #dc2626; font-size: 13px; margin-top: 10px; display: none; }
-
-  /* VIEWS */
-  .view { display: none; }
-  .view.active { display: block; }
-
-  @media (max-width: 600px) {
-    .stats { grid-template-columns: 1fr 1fr; }
-    .form-row { grid-template-columns: 1fr; }
-    .header-inner { gap: 6px; }
-  }
-</style>
+<meta name="robots" content="noindex">
+<title>Galeria zdjęć</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="loginWrap" class="login-wrap">
-  <div class="login-card">
-    <h1>■ InvExpo</h1>
-    <p>System inwentaryzacji salki ekspozycyjnej</p>
-    <div class="form-group">
-      <label>Login</label>
-      <input type="text" id="loginUser" placeholder="np. admin" />
+<header class="topbar">
+  <div class="topbar-inner">
+    <!-- TODO: zmień na własną nazwę galerii -->
+    <div class="topbar-brand">
+      <span class="brand-dot"></span>
+      <span class="brand-name">Galeria zdjęć</span>
     </div>
-    <div class="form-group">
-      <label>Hasło</label>
-      <input type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+    <div class="topbar-actions">
+      <span id="select-count" class="select-count" hidden></span>
+      <button id="deselect-all" class="btn btn-ghost" type="button" hidden>Odznacz wszystko</button>
+      <button id="select-all" class="btn btn-ghost" type="button">Zaznacz wszystko</button>
+      <button id="download-selected" class="btn btn-yellow" type="button" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Pobierz zaznaczone
+      </button>
     </div>
-    <button class="btn-primary" style="width:100%;padding:10px" onclick="doLogin()">Zaloguj się</button>
-    <div class="login-err" id="loginErr">Nieprawidłowy login lub hasło</div>
-    <div style="margin-top:20px;padding:12px;background:#f8fafc;border-radius:8px;font-size:12px;color:#64748b">
-      <strong>Domyślne konta:</strong><br>
-      admin / admin123 &nbsp;|&nbsp; pracownik / pracownik123
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-inner">
+    <!-- TODO: dostosuj opis -->
+    <h1 class="hero-title">Twoje zdjęcia są gotowe</h1>
+    <p class="hero-sub">Kliknij zdjęcie, żeby je powiększyć. Zaznacz wybrane i pobierz je jako ZIP — albo pobierz wszystkie naraz.</p>
+    <div class="hero-meta">
+      <span id="photo-count" class="meta-pill"></span>
+      <button id="download-all" class="btn btn-outline" type="button">
+        Pobierz wszystkie (ZIP)
+      </button>
+    </div>
+    <p id="toolbar-status" class="status-bar" role="status" aria-live="polite"></p>
+  </div>
+</div>
+
+<main class="main">
+  <section id="gallery" class="gallery" aria-label="Zdjęcia">
+    <p id="loading-state" class="state-msg">Wczytywanie…</p>
+  </section>
+</main>
+
+<footer class="footer">
+  <p>Dodawaj zdjęcia do folderu <code>photos/</code> i rób push — galeria zaktualizuje się automatycznie.</p>
+</footer>
+
+<!-- Lightbox -->
+<div id="lightbox" class="lightbox" hidden>
+  <div class="lb-backdrop"></div>
+  <button id="lb-close" class="lb-close" type="button" aria-label="Zamknij">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <button id="lb-prev" class="lb-nav lb-prev" type="button" aria-label="Poprzednie">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <button id="lb-next" class="lb-nav lb-next" type="button" aria-label="Następne">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+  <div class="lb-stage">
+    <img id="lb-image" src="" alt="">
+  </div>
+  <div class="lb-bar">
+    <span id="lb-caption" class="lb-caption"></span>
+    <div class="lb-bar-right">
+      <span id="lb-counter" class="lb-counter"></span>
+      <a id="lb-download" class="btn btn-outline-white" download>Pobierz</a>
     </div>
   </div>
 </div>
 
-<!-- APP -->
-<div id="appWrap" style="display:none">
-
-<!-- HEADER -->
-<div class="header">
-  <div class="header-inner">
-    <span class="logo">■ InvExpo</span>
-    <span class="sep">|</span>
-    <button class="nav-btn active" id="navProducts" onclick="showView('products')">Produkty</button>
-    <button class="nav-btn" id="navLoans" onclick="showView('loans')">Wypożyczenia</button>
-    <span class="spacer"></span>
-    <span id="userLabel" style="font-size:13px;color:#64748b"></span>
-    <button class="alarm-btn" id="alarmBtn" onclick="toggleAlarms()">🔔 <span id="alarmCount">0</span> alarmy</button>
-    <button class="btn-primary btn-sm" onclick="showView('loanForm')">＋ Wypożycz</button>
-    <button class="btn-ghost btn-sm" onclick="showView('addProduct')">+ Produkt</button>
-    <button class="btn-ghost btn-sm" onclick="doLogout()">Wyloguj</button>
-  </div>
-</div>
-
-<!-- ALARM PANEL -->
-<div class="alarm-panel" id="alarmPanel">
-  <div class="alarm-panel-inner">
-    <strong style="color:#dc2626">⚠ Alarmy zwrotu:</strong>
-    <div class="alarm-list" id="alarmList"></div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
-
-<div class="main">
-
-  <!-- PRODUCTS VIEW -->
-  <div class="view active" id="viewProducts">
-    <div class="stats" id="statsRow"></div>
-    <div class="filters">
-      <input type="text" id="searchInput" placeholder="🔍 Szukaj po nazwie, kodzie lub marce…" oninput="renderProducts()">
-      <select id="filterRoom" onchange="renderProducts()">
-        <option>Wszystkie salki</option>
-        <option>Salka A</option>
-        <option>Salka B</option>
-      </select>
-      <select id="filterStatus" onchange="renderProducts()">
-        <option>Wszystkie</option>
-        <option>Dostępne</option>
-        <option>Wypożyczone</option>
-      </select>
-      <span class="count-label" id="countLabel"></span>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr>
-          <th>Kod</th><th>Nazwa</th><th>Marka</th><th>Wymiary</th><th>Salka</th><th>Stan</th><th>Akcje</th>
-        </tr></thead>
-        <tbody id="productsTbody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- LOANS VIEW -->
-  <div class="view" id="viewLoans">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
-      <h2 style="font-size:20px;font-weight:700">Wypożyczenia</h2>
-      <span style="flex:1"></span>
-      <div class="return-row">
-        <input type="text" id="quickReturnId" placeholder="ID wypożyczenia (WYP-…)">
-        <button class="btn-primary" onclick="quickReturn()">Zwrot</button>
-      </div>
-    </div>
-    <div class="tabs">
-      <button class="tab active" onclick="setLoanTab('Aktywne',this)">Aktywne</button>
-      <button class="tab" onclick="setLoanTab('Przeterminowane',this)">Przeterminowane</button>
-      <button class="tab" onclick="setLoanTab('Zwrócone',this)">Zwrócone</button>
-      <button class="tab" onclick="setLoanTab('Wszystkie',this)">Wszystkie</button>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr>
-          <th>ID</th><th>Produkt</th><th>Wypożyczający</th><th>Telefon</th><th>Data wyp.</th><th>Termin zwrotu</th><th>Ilość</th><th>Status</th><th>Akcja</th>
-        </tr></thead>
-        <tbody id="loansTbody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- LOAN FORM -->
-  <div class="view" id="viewLoanForm">
-    <button class="btn-ghost btn-sm" style="margin-bottom:20px" onclick="showView('products')">← Wróć</button>
-    <div class="form-card">
-      <h2>Nowe wypożyczenie</h2>
-      <div class="form-group">
-        <label>Produkt *</label>
-        <select id="loanProduct"></select>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Wypożyczający *</label>
-          <input type="text" id="loanBorrower" placeholder="Imię i nazwisko">
-        </div>
-        <div class="form-group">
-          <label>Telefon</label>
-          <input type="text" id="loanPhone" placeholder="+48 000 000 000">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Termin zwrotu *</label>
-          <input type="date" id="loanReturn">
-        </div>
-        <div class="form-group">
-          <label>Ilość</label>
-          <input type="number" id="loanQty" value="1" min="1">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Uwagi</label>
-        <textarea id="loanNotes" rows="3" placeholder="Opcjonalne uwagi…"></textarea>
-      </div>
-      <div class="form-actions">
-        <button class="btn-ghost" onclick="showView('products')">Anuluj</button>
-        <button class="btn-primary" onclick="submitLoan()">Zarejestruj wypożyczenie</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ADD PRODUCT -->
-  <div class="view" id="viewAddProduct">
-    <button class="btn-ghost btn-sm" style="margin-bottom:20px" onclick="showView('products')">← Wróć</button>
-    <div class="form-card">
-      <h2>Dodaj produkt</h2>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Kod produktu *</label>
-          <input type="text" id="npId" placeholder="EXP-007">
-        </div>
-        <div class="form-group">
-          <label>Marka *</label>
-          <input type="text" id="npBrand" placeholder="np. Vitra">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Nazwa produktu *</label>
-        <input type="text" id="npName" placeholder="np. Fotel tapicerowany">
-      </div>
-      <div class="form-group">
-        <label>Wymiary</label>
-        <input type="text" id="npDim" placeholder="np. 85×75×90 cm">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Salka *</label>
-          <select id="npRoom"><option>Salka A</option><option>Salka B</option></select>
-        </div>
-        <div class="form-group">
-          <label>Ilość sztuk *</label>
-          <input type="number" id="npQty" value="1" min="1">
-        </div>
-      </div>
-      <div class="form-actions">
-        <button class="btn-ghost" onclick="showView('products')">Anuluj</button>
-        <button class="btn-primary" onclick="submitProduct()">Dodaj produkt</button>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /main -->
-</div><!-- /appWrap -->
-
-<script>
-// ── DATA ──
-const USERS = [
-  { username: 'admin', password: 'admin123', role: 'admin', label: 'Administrator' },
-  { username: 'pracownik', password: 'pracownik123', role: 'worker', label: 'Pracownik' }
-];
-
-const SAMPLE = [
-  { id:'EXP-001', name:'Lampa stojąca Arc', brand:'Artemide', dimensions:'180×30×30 cm', room:'Salka A', qty:3, available:3 },
-  { id:'EXP-002', name:'Fotel tapicerowany', brand:'Kare Design', dimensions:'85×75×90 cm', room:'Salka A', qty:2, available:2 },
-  { id:'EXP-003', name:'Stolik kawowy Marble', brand:'BoConcept', dimensions:'110×60×40 cm', room:'Salka B', qty:2, available:2 },
-  { id:'EXP-004', name:'Sofa modułowa', brand:'Minotti', dimensions:'280×95×75 cm', room:'Salka B', qty:1, available:1 },
-  { id:'EXP-005', name:'Regał otwarty', brand:'String Furniture', dimensions:'200×78×30 cm', room:'Salka A', qty:4, available:4 },
-  { id:'EXP-006', name:'Krzesło Shell', brand:'Vitra', dimensions:'83×46×52 cm', room:'Salka B', qty:6, available:6 },
-];
-
-let products = JSON.parse(localStorage.getItem('inv_products') || 'null') || SAMPLE;
-let loans    = JSON.parse(localStorage.getItem('inv_loans')    || '[]');
-let currentUser = null;
-let loanTab = 'Aktywne';
-let alarmsVisible = false;
-
-function save() {
-  localStorage.setItem('inv_products', JSON.stringify(products));
-  localStorage.setItem('inv_loans', JSON.stringify(loans));
-}
-
-// ── AUTH ──
-function doLogin() {
-  const u = document.getElementById('loginUser').value.trim();
-  const p = document.getElementById('loginPass').value;
-  const user = USERS.find(x => x.username === u && x.password === p);
-  if (!user) { document.getElementById('loginErr').style.display = 'block'; return; }
-  currentUser = user;
-  document.getElementById('loginWrap').style.display = 'none';
-  document.getElementById('appWrap').style.display = 'block';
-  document.getElementById('userLabel').textContent = '👤 ' + user.label;
-  document.getElementById('loginErr').style.display = 'none';
-  renderAll();
-}
-
-function doLogout() {
-  currentUser = null;
-  document.getElementById('loginWrap').style.display = 'flex';
-  document.getElementById('appWrap').style.display = 'none';
-  document.getElementById('loginPass').value = '';
-}
-
-// ── VIEWS ──
-function showView(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  const map = { products:'viewProducts', loans:'viewLoans', loanForm:'viewLoanForm', addProduct:'viewAddProduct' };
-  document.getElementById(map[name]).classList.add('active');
-  document.getElementById('navProducts').classList.toggle('active', name==='products'||name==='loanForm'||name==='addProduct');
-  document.getElementById('navLoans').classList.toggle('active', name==='loans');
-  if (name === 'products') renderProducts();
-  if (name === 'loans') renderLoans();
-  if (name === 'loanForm') populateLoanSelect();
-}
-
-// ── HELPERS ──
-function fmtDate(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('pl-PL');
-}
-function daysLeft(dateStr) {
-  if (!dateStr) return null;
-  return Math.ceil((new Date(dateStr) - new Date()) / 86400000);
-}
-function getAlarms() {
-  return loans.filter(l => !l.returned && daysLeft(l.returnDate) !== null && daysLeft(l.returnDate) <= 2);
-}
-function notify(txt, type='ok') {
-  const t = document.getElementById('toast');
-  t.textContent = txt; t.className = 'toast ' + type; t.style.display = 'block';
-  setTimeout(() => t.style.display = 'none', 3000);
-}
-
-// ── RENDER ALL ──
-function renderAll() { renderStats(); renderProducts(); renderAlarms(); }
-
-function renderStats() {
-  const alarms = getAlarms();
-  const hasAlarm = alarms.length > 0;
-  document.getElementById('alarmBtn').style.display = hasAlarm ? 'inline-block' : 'none';
-  document.getElementById('alarmCount').textContent = alarms.length;
-  document.getElementById('statsRow').innerHTML = [
-    { label:'Łącznie produktów', val: products.length, icon:'📦', red:false },
-    { label:'Sztuki dostępne', val: products.reduce((s,p)=>s+p.available,0), icon:'✅', red:false },
-    { label:'Wypożyczone', val: products.reduce((s,p)=>s+(p.qty-p.available),0), icon:'🔄', red:false },
-    { label:'Aktywne alarmy', val: alarms.length, icon:'🔔', red:hasAlarm },
-  ].map(s => `<div class="stat-card ${s.red?'red':''}">
-    <div class="stat-icon">${s.icon}</div>
-    <div class="stat-val ${s.red?'red':''}">${s.val}</div>
-    <div class="stat-label">${s.label}</div>
-  </div>`).join('');
-}
-
-function renderAlarms() {
-  const alarms = getAlarms();
-  const list = document.getElementById('alarmList');
-  list.innerHTML = alarms.map(l => {
-    const prod = products.find(p=>p.id===l.productId);
-    const d = daysLeft(l.returnDate);
-    return `<div class="alarm-card">
-      <div><strong>${prod?.name||l.productId}</strong> — ${l.borrower}<br>
-      <span style="color:${d<0?'#dc2626':'#d97706'};font-size:12px">${d<0?`Przeterminowane o ${-d} dni`:`Zostało ${d} dni`}</span>
-      <span style="color:#94a3b8;font-size:12px"> · Termin: ${fmtDate(l.returnDate)}</span></div>
-      <button class="btn-primary btn-sm" onclick="doReturn('${l.id}');renderAlarms()">✓ Zwrot</button>
-    </div>`;
-  }).join('');
-}
-
-function toggleAlarms() {
-  alarmsVisible = !alarmsVisible;
-  document.getElementById('alarmPanel').style.display = alarmsVisible ? 'block' : 'none';
-  if (alarmsVisible) renderAlarms();
-}
-
-// ── PRODUCTS ──
-function renderProducts() {
-  renderStats();
-  const search = document.getElementById('searchInput').value.toLowerCase();
-  const room   = document.getElementById('filterRoom').value;
-  const status = document.getElementById('filterStatus').value;
-  const filtered = products.filter(p => {
-    const ms = !search || p.name.toLowerCase().includes(search) || p.id.toLowerCase().includes(search) || p.brand.toLowerCase().includes(search);
-    const mr = room === 'Wszystkie salki' || p.room === room;
-    const mv = status === 'Wszystkie' || (status==='Dostępne'&&p.available>0) || (status==='Wypożyczone'&&p.available<p.qty);
-    return ms && mr && mv;
-  });
-  document.getElementById('countLabel').textContent = `${filtered.length} z ${products.length} produktów`;
-  const tbody = document.getElementById('productsTbody');
-  if (!filtered.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Brak wyników</td></tr>'; return; }
-  tbody.innerHTML = filtered.map(p => {
-    const loaned = p.qty - p.available;
-    const bc = p.available===0?'badge-red':p.available<p.qty?'badge-yellow':'badge-green';
-    return `<tr>
-      <td class="code">${p.id}</td>
-      <td><strong>${p.name}</strong></td>
-      <td class="muted">${p.brand}</td>
-      <td class="muted" style="font-size:13px">${p.dimensions||'—'}</td>
-      <td><span class="badge badge-gray">${p.room}</span></td>
-      <td><span class="badge ${bc}">${p.available}/${p.qty}</span>${loaned>0?` <small style="color:#94a3b8">(${loaned} wyp.)</small>`:''}</td>
-      <td><button class="btn-primary btn-sm" ${p.available===0?'disabled style="opacity:.4"':''} onclick="prepLoan('${p.id}')">Wypożycz</button></td>
-    </tr>`;
-  }).join('');
-}
-
-function prepLoan(id) {
-  showView('loanForm');
-  document.getElementById('loanProduct').value = id;
-}
-
-// ── LOANS ──
-function setLoanTab(tab, el) {
-  loanTab = tab;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  renderLoans();
-}
-
-function renderLoans() {
-  const filtered = loans.filter(l => {
-    const d = daysLeft(l.returnDate);
-    if (loanTab==='Aktywne') return !l.returned && d>=0;
-    if (loanTab==='Przeterminowane') return !l.returned && d<0;
-    if (loanTab==='Zwrócone') return l.returned;
-    return true;
-  });
-  const tbody = document.getElementById('loansTbody');
-  if (!filtered.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="9">Brak wypożyczeń</td></tr>'; return; }
-  tbody.innerHTML = filtered.map(l => {
-    const prod = products.find(p=>p.id===l.productId);
-    const d = daysLeft(l.returnDate);
-    const overdue = !l.returned && d<0;
-    const almost  = !l.returned && d>=0 && d<=2;
-    const bc = l.returned?'badge-green':overdue?'badge-red':almost?'badge-yellow':'badge-blue';
-    const statusTxt = l.returned?'Zwrócone':overdue?'Przetermin.':'Aktywne';
-    return `<tr class="${overdue?'overdue':''}">
-      <td style="font-family:monospace;font-size:12px;color:#94a3b8">${l.id}</td>
-      <td><strong>${prod?.name||l.productId}</strong><br><small style="color:#94a3b8">${l.productId}</small></td>
-      <td><strong>${l.borrower}</strong></td>
-      <td class="muted">${l.phone||'—'}</td>
-      <td class="muted" style="font-size:13px">${fmtDate(l.loanDate)}</td>
-      <td style="font-size:13px;color:${overdue?'#dc2626':almost?'#d97706':'inherit'};font-weight:${overdue||almost?600:400}">
-        ${fmtDate(l.returnDate)}
-        ${overdue?`<br><small>⚠ ${-d} dni po terminie</small>`:''}
-        ${almost?`<br><small>⏰ Zostało ${d} dni</small>`:''}
-      </td>
-      <td style="text-align:center">${l.qty}</td>
-      <td><span class="badge ${bc}">${statusTxt}</span></td>
-      <td>${!l.returned
-        ?`<button class="btn-ghost btn-sm" style="border-color:#6ee7b7;color:#065f46;background:#f0fdf4" onclick="doReturn('${l.id}')">✓ Zwrot</button>`
-        :`<small style="color:#94a3b8">${fmtDate(l.returnedDate)}</small>`
-      }</td>
-    </tr>`;
-  }).join('');
-}
-
-function quickReturn() {
-  const id = document.getElementById('quickReturnId').value.trim();
-  doReturn(id);
-  document.getElementById('quickReturnId').value = '';
-}
-
-function doReturn(id) {
-  const loan = loans.find(l=>l.id===id);
-  if (!loan || loan.returned) { notify('Nie znaleziono aktywnego wypożyczenia', 'err'); return; }
-  loan.returned = true;
-  loan.returnedDate = new Date().toISOString();
-  const prod = products.find(p=>p.id===loan.productId);
-  if (prod) prod.available = Math.min(prod.qty, prod.available + loan.qty);
-  save(); renderAll(); renderLoans();
-  notify('✓ Zwrot zarejestrowany');
-}
-
-// ── LOAN FORM ──
-function populateLoanSelect() {
-  const sel = document.getElementById('loanProduct');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">— wybierz produkt —</option>' +
-    products.filter(p=>p.available>0).map(p=>
-      `<option value="${p.id}">${p.id} · ${p.name} (${p.brand}) — dostępne: ${p.available}</option>`
-    ).join('');
-  if (cur) sel.value = cur;
-  // set min date
-  document.getElementById('loanReturn').min = new Date().toISOString().split('T')[0];
-}
-
-function submitLoan() {
-  const pid  = document.getElementById('loanProduct').value;
-  const borr = document.getElementById('loanBorrower').value.trim();
-  const ret  = document.getElementById('loanReturn').value;
-  const qty  = parseInt(document.getElementById('loanQty').value)||1;
-  if (!pid)  { notify('Wybierz produkt','err'); return; }
-  if (!borr) { notify('Podaj wypożyczającego','err'); return; }
-  if (!ret)  { notify('Podaj termin zwrotu','err'); return; }
-  const prod = products.find(p=>p.id===pid);
-  if (qty > prod.available) { notify('Brak wystarczającej ilości','err'); return; }
-  const loan = {
-    id: 'WYP-'+Date.now(),
-    productId: pid, borrower: borr,
-    phone: document.getElementById('loanPhone').value.trim(),
-    qty, loanDate: new Date().toISOString(),
-    returnDate: ret, returned: false,
-    notes: document.getElementById('loanNotes').value.trim()
-  };
-  loans.unshift(loan);
-  prod.available -= qty;
-  save();
-  document.getElementById('loanBorrower').value='';
-  document.getElementById('loanPhone').value='';
-  document.getElementById('loanNotes').value='';
-  document.getElementById('loanQty').value='1';
-  document.getElementById('loanProduct').value='';
-  showView('loans');
-  notify('✓ Wypożyczenie zarejestrowane');
-}
-
-// ── ADD PRODUCT ──
-function submitProduct() {
-  const id   = document.getElementById('npId').value.trim();
-  const name = document.getElementById('npName').value.trim();
-  const brand= document.getElementById('npBrand').value.trim();
-  if (!id||!name||!brand) { notify('Uzupełnij wymagane pola','err'); return; }
-  if (products.find(p=>p.id===id)) { notify('Kod produktu już istnieje!','err'); return; }
-  const qty = parseInt(document.getElementById('npQty').value)||1;
-  products.push({ id, name, brand,
-    dimensions: document.getElementById('npDim').value.trim(),
-    room: document.getElementById('npRoom').value,
-    qty, available: qty
-  });
-  save();
-  ['npId','npName','npBrand','npDim'].forEach(i=>document.getElementById(i).value='');
-  document.getElementById('npQty').value='1';
-  showView('products');
-  notify('✓ Produkt dodany');
-}
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="assets/app.js"></script>
 </body>
 </html>
