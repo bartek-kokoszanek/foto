@@ -21,6 +21,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Rename photos to URL-safe filenames
+        run: |
+          cd photos
+          for f in *; do
+            [ -f "$f" ] || continue
+            safe=$(echo "$f" | iconv -f UTF-8 -t ASCII//TRANSLIT 2>/dev/null | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g')
+            if [ "$f" != "$safe" ]; then
+              echo "Renaming: $f -> $safe"
+              mv "$f" "$safe"
+            fi
+          done
+
       - name: Generate photo manifest
         run: node generate-manifest.js
 
