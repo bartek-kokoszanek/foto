@@ -1,72 +1,63 @@
 (function () {
   "use strict";
 
-  const galleryEl = document.getElementById("gallery");
-  const photoCountEl = document.getElementById("photo-count");
-  const statusEl = document.getElementById("toolbar-status");
-  const downloadAllBtn = document.getElementById("download-all");
-  const downloadSelBtn = document.getElementById("download-selected");
-  const selectAllBtn = document.getElementById("select-all");
-  const deselectAllBtn = document.getElementById("deselect-all");
-  const selectCountEl = document.getElementById("select-count");
+  // Auto-detect repo owner and name from GitHub Pages URL
+  // e.g. bartek-kokoszanek.github.io/foto -> owner=bartek-kokoszanek, repo=foto
+  const owner = location.hostname.replace(".github.io", "");
+  const repo  = location.pathname.split("/").filter(Boolean)[0] || "";
+  const API   = "https://api.github.com/repos/" + owner + "/" + repo + "/contents/photos";
+  const VALID = /\.(jpe?g|png|webp|gif|avif)$/i;
 
-  const lightbox = document.getElementById("lightbox");
-  const lbImage = document.getElementById("lb-image");
+  const galleryEl       = document.getElementById("gallery");
+  const photoCountEl    = document.getElementById("photo-count");
+  const statusEl        = document.getElementById("toolbar-status");
+  const downloadAllBtn  = document.getElementById("download-all");
+  const downloadSelBtn  = document.getElementById("download-selected");
+  const selectAllBtn    = document.getElementById("select-all");
+  const deselectAllBtn  = document.getElementById("deselect-all");
+  const selectCountEl   = document.getElementById("select-count");
+
+  const lightbox  = document.getElementById("lightbox");
+  const lbImage   = document.getElementById("lb-image");
   const lbCaption = document.getElementById("lb-caption");
   const lbCounter = document.getElementById("lb-counter");
-  const lbDownload = document.getElementById("lb-download");
-  const lbClose = document.getElementById("lb-close");
-  const lbPrev = document.getElementById("lb-prev");
-  const lbNext = document.getElementById("lb-next");
-  const lbBackdrop = lightbox.querySelector(".lb-backdrop");
+  const lbDownload= document.getElementById("lb-download");
+  const lbClose   = document.getElementById("lb-close");
+  const lbPrev    = document.getElementById("lb-prev");
+  const lbNext    = document.getElementById("lb-next");
+  const lbBackdrop= lightbox.querySelector(".lb-backdrop");
 
-  let photos = [];
+  let photos = [];       // [{name, url}]
   let selected = new Set();
   let currentIndex = -1;
 
-  function photoPath(file) { return "photos/" + encodeURIComponent(file); }
-
-  function ext(file) {
-    const m = file.match(/\.([^.]+)$/);
-    return m ? m[1].toUpperCase() : "";
-  }
-
-  function shortName(file) {
-    return file.replace(/\.[^.]+$/, "");
-  }
+  function shortName(name) { return name.replace(/\.[^.]+$/, ""); }
+  function ext(name) { const m = name.match(/\.([^.]+)$/); return m ? m[1].toUpperCase() : ""; }
 
   function updateSelectionUI() {
     const n = selected.size;
     downloadSelBtn.disabled = n === 0;
-    selectCountEl.hidden = n === 0;
-    deselectAllBtn.hidden = n === 0;
-    if (n > 0) {
-      selectCountEl.textContent = n === 1 ? "1 zaznaczone" : n + " zaznaczonych";
-    }
+    selectCountEl.hidden    = n === 0;
+    deselectAllBtn.hidden   = n === 0;
+    if (n > 0) selectCountEl.textContent = n === 1 ? "1 zaznaczone" : n + " zaznaczonych";
   }
 
-  function toggleSelect(index) {
-    const card = galleryEl.querySelectorAll(".card")[index];
-    if (selected.has(index)) {
-      selected.delete(index);
+  function toggleSelect(i) {
+    const card = galleryEl.querySelectorAll(".card")[i];
+    if (selected.has(i)) {
+      selected.delete(i);
       card.classList.remove("selected");
-      card.setAttribute("aria-pressed", "false");
     } else {
-      selected.add(index);
+      selected.add(i);
       card.classList.add("selected");
-      card.setAttribute("aria-pressed", "true");
     }
     updateSelectionUI();
   }
 
   function render(list) {
     galleryEl.innerHTML = "";
-
     if (list.length === 0) {
-      const p = document.createElement("p");
-      p.className = "state-msg";
-      p.textContent = "Galeria jest jeszcze pusta. Wgraj zdjęcia do folderu photos/ i zrób push.";
-      galleryEl.appendChild(p);
+      galleryEl.innerHTML = '<p class="state-msg">Brak zdjęć w folderze photos/ — wgraj je na GitHub i zrób commit.</p>';
       photoCountEl.textContent = "";
       downloadAllBtn.disabled = true;
       return;
@@ -80,29 +71,20 @@
       card.className = "card";
       card.setAttribute("role", "button");
       card.setAttribute("tabindex", "0");
-      card.setAttribute("aria-pressed", "false");
-      card.setAttribute("aria-label", photo.caption || shortName(photo.file));
+      card.setAttribute("aria-label", shortName(photo.name));
 
       const img = document.createElement("img");
-      img.src = photoPath(photo.file);
+      img.src = photo.url;
       img.className = "card-thumb";
       img.loading = "lazy";
       img.decoding = "async";
-      img.alt = photo.caption || "";
+      img.alt = shortName(photo.name);
 
       const info = document.createElement("div");
       info.className = "card-info";
-
-      const name = document.createElement("p");
-      name.className = "card-name";
-      name.textContent = photo.caption || shortName(photo.file);
-
-      const meta = document.createElement("p");
-      meta.className = "card-meta";
-      meta.textContent = ext(photo.file);
-
-      info.appendChild(name);
-      info.appendChild(meta);
+      info.innerHTML =
+        '<p class="card-name">' + shortName(photo.name) + "</p>" +
+        '<p class="card-meta">' + ext(photo.name) + "</p>";
 
       const check = document.createElement("div");
       check.className = "card-check";
@@ -113,21 +95,11 @@
       card.appendChild(check);
 
       let clickTimer = null;
-
-      card.addEventListener("click", (e) => {
-        if (clickTimer) {
-          clearTimeout(clickTimer);
-          clickTimer = null;
-          openLightbox(i);
-          return;
-        }
-        clickTimer = setTimeout(() => {
-          clickTimer = null;
-          toggleSelect(i);
-        }, 220);
+      card.addEventListener("click", () => {
+        if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; openLightbox(i); return; }
+        clickTimer = setTimeout(() => { clickTimer = null; toggleSelect(i); }, 220);
       });
-
-      card.addEventListener("keydown", (e) => {
+      card.addEventListener("keydown", e => {
         if (e.key === "Enter") openLightbox(i);
         if (e.key === " ") { e.preventDefault(); toggleSelect(i); }
       });
@@ -141,113 +113,100 @@
       const card = galleryEl.querySelectorAll(".card")[i];
       selected.add(i);
       card.classList.add("selected");
-      card.setAttribute("aria-pressed", "true");
     });
     updateSelectionUI();
   });
 
   deselectAllBtn.addEventListener("click", () => {
     selected.clear();
-    galleryEl.querySelectorAll(".card").forEach(c => {
-      c.classList.remove("selected");
-      c.setAttribute("aria-pressed", "false");
-    });
+    galleryEl.querySelectorAll(".card").forEach(c => c.classList.remove("selected"));
     updateSelectionUI();
   });
 
-  // Download helpers
   async function packZip(indices, zipName) {
-    const zip = new JSZip();
     const total = indices.length;
     for (let k = 0; k < total; k++) {
-      const photo = photos[indices[k]];
       statusEl.textContent = "Pakowanie " + (k + 1) + " / " + total + "…";
-      const res = await fetch(photoPath(photo.file));
-      if (!res.ok) throw new Error("Nie udało się pobrać: " + photo.file);
-      zip.file(photo.file, await res.blob());
+      const photo = photos[indices[k]];
+      const res = await fetch(photo.url);
+      if (!res.ok) throw new Error("Nie udało się pobrać: " + photo.name);
+      JSZip.file(photo.name, await res.blob());
     }
     statusEl.textContent = "Tworzenie archiwum…";
-    const blob = await zip.generateAsync({ type: "blob" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = zipName;
+    const blob = await JSZip.generateAsync({ type: "blob" });
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: zipName });
     document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
     statusEl.textContent = "Pobrano ✓";
     setTimeout(() => statusEl.textContent = "", 3500);
   }
 
+  // Fixed: create JSZip instance per download
   downloadAllBtn.addEventListener("click", async () => {
     downloadAllBtn.disabled = true;
+    window.JSZip = new JSZip();
     try { await packZip(photos.map((_, i) => i), "galeria.zip"); }
     catch (e) { statusEl.textContent = "Błąd: " + e.message; }
     finally { downloadAllBtn.disabled = false; }
   });
 
   downloadSelBtn.addEventListener("click", async () => {
-    if (selected.size === 0) return;
+    if (!selected.size) return;
     downloadSelBtn.disabled = true;
+    window.JSZip = new JSZip();
     try { await packZip([...selected].sort((a, b) => a - b), "zaznaczone.zip"); }
     catch (e) { statusEl.textContent = "Błąd: " + e.message; }
     finally { downloadSelBtn.disabled = selected.size === 0; }
   });
 
   // Lightbox
-  function openLightbox(index) {
-    currentIndex = index;
-    updateLightbox();
-    lightbox.hidden = false;
-    document.body.style.overflow = "hidden";
+  function openLightbox(i) {
+    currentIndex = i; updateLightbox();
+    lightbox.hidden = false; document.body.style.overflow = "hidden";
     lbClose.focus();
   }
-
-  function closeLightbox() {
-    lightbox.hidden = true;
-    document.body.style.overflow = "";
-  }
-
+  function closeLightbox() { lightbox.hidden = true; document.body.style.overflow = ""; }
   function updateLightbox() {
-    const p = photos[currentIndex];
-    if (!p) return;
-    lbImage.src = photoPath(p.file);
-    lbImage.alt = p.caption || p.file;
-    lbCaption.textContent = p.caption || shortName(p.file);
+    const p = photos[currentIndex]; if (!p) return;
+    lbImage.src = p.url; lbImage.alt = p.name;
+    lbCaption.textContent = shortName(p.name);
     lbCounter.textContent = (currentIndex + 1) + " / " + photos.length;
-    lbDownload.href = photoPath(p.file);
-    lbDownload.setAttribute("download", p.file);
+    lbDownload.href = p.url; lbDownload.setAttribute("download", p.name);
   }
 
   lbClose.addEventListener("click", closeLightbox);
   lbBackdrop.addEventListener("click", closeLightbox);
   lbPrev.addEventListener("click", () => { currentIndex = (currentIndex - 1 + photos.length) % photos.length; updateLightbox(); });
   lbNext.addEventListener("click", () => { currentIndex = (currentIndex + 1) % photos.length; updateLightbox(); });
-
   document.addEventListener("keydown", e => {
     if (lightbox.hidden) return;
     if (e.key === "Escape") closeLightbox();
     if (e.key === "ArrowLeft") { currentIndex = (currentIndex - 1 + photos.length) % photos.length; updateLightbox(); }
     if (e.key === "ArrowRight") { currentIndex = (currentIndex + 1) % photos.length; updateLightbox(); }
   });
-
-  let touchX = null;
-  lightbox.addEventListener("touchstart", e => touchX = e.changedTouches[0].clientX);
+  let tX = null;
+  lightbox.addEventListener("touchstart", e => tX = e.changedTouches[0].clientX);
   lightbox.addEventListener("touchend", e => {
-    if (touchX === null) return;
-    const dx = e.changedTouches[0].clientX - touchX;
-    if (Math.abs(dx) > 40) {
-      dx < 0
-        ? (currentIndex = (currentIndex + 1) % photos.length)
-        : (currentIndex = (currentIndex - 1 + photos.length) % photos.length);
-      updateLightbox();
-    }
-    touchX = null;
+    if (tX === null) return;
+    const dx = e.changedTouches[0].clientX - tX;
+    if (Math.abs(dx) > 40) { currentIndex = (currentIndex + (dx < 0 ? 1 : -1) + photos.length) % photos.length; updateLightbox(); }
+    tX = null;
   });
 
-  // Load manifest
-  fetch("manifest.json")
-    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-    .then(data => { photos = Array.isArray(data) ? data : []; render(photos); })
-    .catch(() => {
-      galleryEl.innerHTML = '<p class="state-msg">Nie udało się wczytać listy zdjęć (manifest.json).<br>Sprawdź czy GitHub Action zakończył się pomyślnie.</p>';
+  // Load photos from GitHub API
+  galleryEl.innerHTML = '<p class="state-msg">Wczytywanie…</p>';
+  fetch(API)
+    .then(r => {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
+    .then(data => {
+      photos = data
+        .filter(f => f.type === "file" && VALID.test(f.name))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }))
+        .map(f => ({ name: f.name, url: f.download_url }));
+      render(photos);
+    })
+    .catch(err => {
+      galleryEl.innerHTML = '<p class="state-msg">Nie udało się załadować zdjęć (' + err.message + ').<br>Upewnij się że repozytorium jest publiczne.</p>';
     });
 })();
