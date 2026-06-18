@@ -99,8 +99,11 @@
       card.appendChild(info);
       card.appendChild(check);
 
-      // Card click = open lightbox
-      card.addEventListener("click", () => openLightbox(i));
+      // Card click = open lightbox (ignore clicks on checkbox)
+      card.addEventListener("click", (e) => {
+        if (e.target.closest(".card-check")) return;
+        openLightbox(i);
+      });
       card.addEventListener("keydown", e => {
         if (e.key === "Enter") openLightbox(i);
       });
