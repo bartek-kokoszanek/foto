@@ -24,7 +24,7 @@
   let selected = new Set();
   let currentIndex = -1;
 
-  function photoPath(file) { return "photos/" + file; }
+  function photoPath(file) { return "photos/" + encodeURIComponent(file); }
 
   function ext(file) {
     const m = file.match(/\.([^.]+)$/);
